@@ -7,6 +7,7 @@ const port = process.env.PORT;
 const userRoute = require("./routes/userRoute");
 const categoryRoute = require("./routes/categoryRoute");
 const productRoute = require("./routes/productRoute");
+const cartRoute = require("./routes/cartRoute");
 // connect to db first before running on port
 mongoose
   .connect(process.env.MONGO_URI)
@@ -24,6 +25,7 @@ app.use(cookieParser());
 app.use("/api", userRoute);
 app.use("/api", categoryRoute);
 app.use("/api", productRoute);
+app.use("/api", cartRoute);
 app.use((error, req, res, next) => {
   return res
     .status(error.status || 500)

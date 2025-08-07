@@ -10,6 +10,5 @@ const route = express.Router();
 route.post("/category", authentication, createCategory);
 route.put("/category/:categoryId", authentication, updateCategory);
 route.delete("/catgegory/:categoryId", authentication, deleteCatgeory);
-// route.get("/getsinglecategory/:id");
 route.get("/allcategories", getAllCategories);
 module.exports = route;
