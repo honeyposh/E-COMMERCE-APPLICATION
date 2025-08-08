@@ -2,8 +2,10 @@ const express = require("express");
 const {
   addToCart,
   getAllCartItem,
-  getSingleProductFromCart,
-  removeitemFromCart,
+  getSingleItemFromCartItem,
+  updateCartItem,
+  removeSingleCartItem,
+  deleteCart,
 } = require("../controllers/cartController");
 const { authentication } = require("../middleware/authMiddleware");
 const route = express.Router();
@@ -12,11 +14,13 @@ route.get("/cart", authentication, getAllCartItem);
 route.get(
   "/cart/:cartId/product/:productId",
   authentication,
-  getSingleProductFromCart
+  getSingleItemFromCartItem
 );
+route.put("/cart/:cartId/item/:itemId", authentication, updateCartItem);
 route.delete(
-  "/cart/:cartId/product/:productId",
+  "/deletecartItem/:cartId/item/:itemId",
   authentication,
-  removeitemFromCart
+  removeSingleCartItem
 );
+route.delete("/cart/:cartId", authentication, deleteCart);
 module.exports = route;

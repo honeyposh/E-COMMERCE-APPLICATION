@@ -36,11 +36,7 @@ exports.addToCart = async (req, res, next) => {
     }
     cart.subtotal = subtotal;
     await cart.save();
-    await userModel.findByIdAndUpdate(
-      id,
-      { $push: { cart: cart.id } },
-      { new: true }
-    );
+    await userModel.findByIdAndUpdate(id, { cart: cart.id }, { new: true });
     return res.status(200).json(cart);
   } catch (error) {
     next(error);
@@ -61,7 +57,7 @@ exports.getAllCartItem = async (req, res, next) => {
     next(error);
   }
 };
-exports.getSingleProductFromCart = async (req, res, next) => {
+exports.getSingleItemFromCartItem = async (req, res, next) => {
   try {
     const { cartId, productId } = req.params;
     const { id } = req.user;
@@ -94,45 +90,107 @@ exports.getSingleProductFromCart = async (req, res, next) => {
     next(error);
   }
 };
-exports.removeitemFromCart = async (req, res, next) => {
+exports.updateCartItem = async (req, res, next) => {
+  const { quantity } = req.body;
+  const { cartId, itemId } = req.params;
+  if (!quantity || quantity <= 0) {
+    const error = new Error("Quantity must be greater than 0");
+    error.status = 400;
+    return next(error);
+  }
   try {
-    const { cartId, productId } = req.params;
-    const { id, admin } = req.user;
     const cart = await cartModel.findById(cartId);
     if (!cart) {
       const error = new Error("No cart");
       error.status = 404;
       return next(error);
     }
-    if (id != cart.user && !admin) {
+    if (req.user.id != cart.user && !req.user.admin) {
+      const error = new Error("you cant update this post");
+      error.status = 401;
+      return next(error);
+    }
+    const itemIndex = cart.cartItems.findIndex((item) => {
+      return item._id.toString() === itemId;
+    });
+    console.log(itemIndex);
+    if (itemIndex == -1) {
+      const error = new Error("There is no item in this cart");
+      error.status = 404;
+      return next(error);
+    }
+    cart.cartItems[itemIndex].quantity = quantity;
+    let subtotal = 0;
+    for (const item of cart.cartItems) {
+      const product = await productModel.findById(item.productId);
+      subtotal += product.price * item.quantity;
+    }
+    cart.subtotal = subtotal;
+    await cart.save();
+    return res.status(200).json(cart);
+  } catch (error) {
+    next(error);
+  }
+};
+exports.removeSingleCartItem = async (req, res, next) => {
+  try {
+    const { cartId, itemId } = req.params;
+    const cart = await cartModel.findById(cartId);
+    if (!cart) {
+      const error = new Error("No cart");
+      error.status = 404;
+      return next(error);
+    }
+    if (req.user.id != cart.user && !req.user.admin) {
       const error = new Error("you cant delete this post");
       error.status = 401;
       return next(error);
     }
-    const itemIndex = cart.cartItems.findIndex(
-      (item) => item.productId == productId
+    const exists = cart.cartItems.some(
+      (item) => item._id.toString() === itemId
     );
-    if (itemIndex === -1) {
-      const error = new Error("Product not in cart");
-      error.status = 400;
+    console.log(exists);
+    if (!exists) {
+      const error = new Error("Item not found in cart");
+      error.status = 404;
       return next(error);
     }
-    const item = cart.cartItems[itemIndex];
-    // console.log(item);
-    if (item.quantity > 1) {
-      cart.cartItems[itemIndex].quantity -= 1;
-    } else {
-      cart.cartItems.splice(itemIndex, 1);
+
+    const updatedCart = await cartModel.findByIdAndUpdate(
+      cartId,
+      {
+        $pull: { cartItems: { _id: itemId } },
+      },
+      { new: true }
+    );
+    subtotal = 0;
+    for (let item of updatedCart.cartItems) {
+      const product = await productModel.findById(item.productId);
+      subtotal += product.price * item.quantity;
     }
-    let subtotal = 0;
-    for (const cartItem of cart.cartItems) {
-      const product = await productModel.findById(cartItem.productId);
-      subtotal += product.price * cartItem.quantity;
-      console.log(subtotal);
+    updatedCart.subtotal = subtotal;
+    await updatedCart.save();
+    return res.status(200).json({ message: "cartItem successfully deleted" });
+  } catch (error) {
+    next(error);
+  }
+};
+exports.deleteCart = async (req, res, next) => {
+  try {
+    const { cartId } = req.params;
+    const cart = await cartModel.findById(cartId);
+    if (!cart) {
+      const error = new Error("No cart");
+      error.status = 404;
+      return next(error);
     }
-    cart.subtotal = subtotal;
-    await cart.save();
-    return res.status(200).json({ message: "cart removed", cart });
+    if (req.user.id != cart.user && !req.user.admin) {
+      const error = new Error("you cant delete this post");
+      error.status = 401;
+      return next(error);
+    }
+    await cartModel.findByIdAndDelete(cartId);
+    return res.status(200).json({ message: "cart deleted successfully" });
   } catch (error) {
     next(error);
   }

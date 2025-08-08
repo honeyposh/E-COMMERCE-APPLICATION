@@ -1,19 +1,19 @@
 const productModel = require("../models/productModel");
 const categoryModel = require("../models/categoryModel");
 exports.createProduct = async (req, res, next) => {
+  const {
+    categoryName,
+    name,
+    description,
+    price,
+    image,
+    size,
+    color,
+    gender,
+    discountPrice,
+  } = req.body;
   try {
-    const {
-      categoryName,
-      name,
-      description,
-      price,
-      image,
-      size,
-      color,
-      gender,
-      discountPrice,
-    } = req.body;
-    if (!req.user.id || !req.user.admin) {
+    if (!req.user.admin) {
       const error = new Error("Access denied");
       error.status = 403;
       return next(error);
@@ -74,5 +74,78 @@ exports.getProductsByCategory = async (req, res, next) => {
     return res.status(200).json(products);
   } catch (error) {
     next(error);
+  }
+};
+exports.geAllProduct = async (req, res, next) => {
+  res.send("hello");
+};
+exports.updateProduct = async (req, res, next) => {
+  try {
+    const {
+      name,
+      description,
+      price,
+      image,
+      size,
+      color,
+      gender,
+      discountPrice,
+    } = req.body;
+    const { productId } = req.params;
+    if (!req.user.admin) {
+      const error = new Error("Access denied");
+      error.status = 403;
+      return next(error);
+    }
+    const product = await productModel.findById(productId);
+    console.log(typeof product.category);
+    if (!product) {
+      const error = new Error("ptoduct Not found");
+      error.status = 404;
+      return next(error);
+    }
+    await productModel.findByIdAndUpdate(
+      productId,
+      {
+        name,
+        category: product.category,
+        description,
+        price,
+        image,
+        size,
+        color,
+        gender,
+        discountPrice,
+      },
+      { new: true, runValidators: true }
+    );
+    return res.status(200).json({ message: "product updated successfully" });
+  } catch (error) {
+    next(error);
+  }
+};
+exports.softdeleteProduct = async (req, res, next) => {
+  console.log("hello");
+  try {
+    const { productId } = req.params;
+    if (!req.user.admin) {
+      const error = new Error("Access denied");
+      error.status = 403;
+      return next(error);
+    }
+    const product = await productModel.findById(productId);
+    if (!product) {
+      const error = new Error("ptoduct Not found");
+      error.status = 404;
+      return next(error);
+    }
+    product.isDeleted = true;
+    product.inStock = false;
+    await product.save();
+    return res
+      .status(200)
+      .json({ message: "product softdeleted successfully" });
+  } catch (error) {
+    return next(error);
   }
 };
