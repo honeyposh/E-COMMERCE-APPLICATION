@@ -25,6 +25,7 @@ exports.createProduct = async (req, res, next) => {
       return next(error);
     }
     // console.log(category);
+
     const product = await productModel.create({
       name,
       category: category.id,
@@ -58,26 +59,27 @@ exports.getProduct = async (req, res, next) => {
     return next(error);
   }
 };
-exports.getProductsByCategory = async (req, res, next) => {
-  try {
-    const { categoryId } = req.params;
-    const products = await productModel
-      .find({ category: categoryId })
-      .populate("category", "name")
-      .sort({ createdAt: -1 });
-    if (!products.length) {
-      const error = new Error("No product in this category");
-      error.status = 404;
-      return next(error);
-    }
-
-    return res.status(200).json(products);
-  } catch (error) {
-    next(error);
+exports.getAllProduct = async (req, res, next) => {
+  const { keyword, sort, category } = req.query;
+  let queryObject = {};
+  if (keyword) {
+    queryObject.name = { $regex: keyword, $options: "i" };
   }
-};
-exports.geAllProduct = async (req, res, next) => {
-  res.send("hello");
+  if (category) {
+    queryObject.category = category;
+  }
+  let result = productModel.find(queryObject);
+  if (sort) {
+    result = result.sort(sort);
+  } else {
+    result = result.sort("-createdAt");
+  }
+  const limit = Number(req.query.limit) || 10;
+  const page = Number(req.query.page) || 1;
+  const skip = (page - 1) * limit;
+  result = result.skip(skip).limit(limit);
+  const products = await result;
+  res.status(200).json({ products });
 };
 exports.updateProduct = async (req, res, next) => {
   try {

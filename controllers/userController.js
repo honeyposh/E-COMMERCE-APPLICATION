@@ -133,3 +133,4 @@ exports.getprofile = async (req, res, next) => {
     next(error);
   }
 };
+exports.resetPassword;

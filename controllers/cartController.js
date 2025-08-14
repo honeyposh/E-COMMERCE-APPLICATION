@@ -17,6 +17,7 @@ exports.addToCart = async (req, res, next) => {
       return next(error);
     }
     let cart = await cartModel.findOne({ user: id });
+    console.log(cart);
     if (!cart) {
       cart = await cartModel.create({ user: id, cartItems: [], subtotal: 0 });
     }
