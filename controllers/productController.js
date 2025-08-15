@@ -1,6 +1,10 @@
 const productModel = require("../models/productModel");
 const categoryModel = require("../models/categoryModel");
+const cloudinary = require("../utils/cloudinary");
+const fs = require("fs/promises");
 exports.createProduct = async (req, res, next) => {
+  let filePath = [];
+  let uploadedImages = [];
   const {
     categoryName,
     name,
@@ -24,14 +28,23 @@ exports.createProduct = async (req, res, next) => {
       error.status = 404;
       return next(error);
     }
-    // console.log(category);
-
+    for (x of req.files) {
+      filePath.push(x.path);
+      const response = await cloudinary.uploader.upload(x.path, {
+        folder: "Posh",
+      });
+      uploadedImages.push(response);
+      await fs.unlink(x.path);
+    }
     const product = await productModel.create({
       name,
       category: category.id,
       description,
       price,
-      image,
+      image: uploadedImages.map((img) => ({
+        url: img.secure_url,
+        public_id: img.public_id,
+      })),
       size,
       color,
       gender,
@@ -39,6 +52,20 @@ exports.createProduct = async (req, res, next) => {
     });
     return res.status(201).json({ product });
   } catch (error) {
+    for (let path of filePath) {
+      try {
+        await fs.unlink(path);
+      } catch (error) {
+        console.log(error);
+      }
+    }
+    for (const img of uploadedImages) {
+      try {
+        await cloudinary.uploader.destroy(img.public_id);
+      } catch (cleanupErr) {
+        console.log("Failed to delete from Cloudinary:", cleanupErr);
+      }
+    }
     return next(error);
   }
 };
