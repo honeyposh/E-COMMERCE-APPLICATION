@@ -48,9 +48,17 @@ const orderSchema = mongoose.Schema({
   deliveredAt: Date,
   orderStatus: {
     type: String,
-    enum: ["Pending", "Processing", "Shipped", "Delivered", "Cancelled"],
+    enum: [
+      "Pending",
+      "Processing",
+      "Paid",
+      "Shipped",
+      "Delivered",
+      "Cancelled",
+    ],
     default: "Pending",
   },
+  sessionId: { type: String },
 });
 const orderModel = mongoose.model("Order", orderSchema);
 module.exports = orderModel;

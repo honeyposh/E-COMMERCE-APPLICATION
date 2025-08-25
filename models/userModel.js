@@ -1,5 +1,4 @@
 const mongoose = require("mongoose");
-const isoDateRegex = /^\d{4}-\d{2}-\d{2}$/;
 const userSchema = new mongoose.Schema(
   {
     email: {
@@ -34,6 +33,10 @@ const userSchema = new mongoose.Schema(
     isAdmin: {
       type: Boolean,
       default: false,
+    },
+    resetPasswordLink: {
+      type: String,
+      default: "",
     },
   },
   { timestamps: true }

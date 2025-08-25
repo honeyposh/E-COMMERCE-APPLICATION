@@ -1,7 +1,9 @@
 const cartModel = require("../models/cartModel");
 const productModel = require("../models/productModel");
 const orderModel = require("../models/orderModel");
-exports.checkout = async (req, res, next) => {
+const Stripe = require("stripe");
+const stripe = new Stripe(process.env.STRIPE_KEY);
+exports.createOrder = async (req, res, next) => {
   const {
     taxPrice,
     shippingPrice,
@@ -56,12 +58,71 @@ exports.checkout = async (req, res, next) => {
       shippingPrice,
       totalItemPrice: subtotal + shippingPrice + taxPrice,
     });
-    cart.cartItems = [];
-    cart.subtotal = 0;
-    await cart.save();
     return res.status(201).json({
-      message: "order placed succesfully awaiting payment",
-      paymentUrl: "https://pay.example.com/...",
+      order,
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+exports.checkout = async (req, res, next) => {
+  const { orderId } = req.params;
+  try {
+    const order = await orderModel.findById(orderId);
+    const { id } = req.user;
+    const cart = await cartModel
+      .findOne({ user: id })
+      .populate("cartItems.productId", "name price");
+    console.log(cart);
+    if (!cart || cart.cartItems.length <= 0) {
+      const error = new Error("No Item in cart");
+      error.status = 404;
+      return next(error);
+    }
+    const line_items = [
+      ...cart.cartItems.map((item) => ({
+        price_data: {
+          currency: "usd",
+          product_data: {
+            name: item.productId.name,
+            images: [item.productId.image],
+          },
+          unit_amount: item.productId.price * 100, // cents
+        },
+        quantity: item.quantity,
+      })),
+      {
+        price_data: {
+          currency: "usd",
+          product_data: { name: "Shipping Fee" },
+          unit_amount: order.shippingPrice * 100,
+        },
+        quantity: 1,
+      },
+
+      {
+        price_data: {
+          currency: "usd",
+          product_data: { name: "Tax" },
+          unit_amount: order.taxPrice * 100,
+        },
+        quantity: 1,
+      },
+    ];
+    const session = await stripe.checkout.sessions.create({
+      customer_email: req.user.email,
+      line_items,
+      mode: "payment",
+      success_url: "https://example.com/success",
+      cancel_url: "https://example.com/cancel",
+      metadata: {
+        orderId: order._id.toString(),
+        userId: id,
+      },
+    });
+    return res.status(201).json({
+      url: session.url,
     });
   } catch (error) {
     return next(error);

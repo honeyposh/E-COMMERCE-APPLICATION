@@ -9,6 +9,7 @@ const categoryRoute = require("./routes/categoryRoute");
 const productRoute = require("./routes/productRoute");
 const cartRoute = require("./routes/cartRoute");
 const orderRoute = require("./routes/orderRoute");
+const webhookRoute = require("./routes/webhook");
 // connect to db first before running on port
 mongoose
   .connect(process.env.MONGO_URI)
@@ -21,6 +22,7 @@ mongoose
   .catch((error) => {
     console.log(error);
   });
+app.use("/webhook", webhookRoute);
 app.use(express.json());
 app.use(cookieParser());
 app.use("/api", userRoute);

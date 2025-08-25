@@ -6,6 +6,8 @@ const {
   deleteProfile,
   updateprofile,
   getprofile,
+  forgetPassword,
+  resetPassword,
 } = require("../controllers/userController");
 const { authentication } = require("../middleware/authMiddleware");
 const { validatedob } = require("../middleware/validateDateOfBirth");
@@ -16,4 +18,6 @@ route.post("/logout", logout);
 route.delete("/profile", authentication, deleteProfile);
 route.put("/profile", authentication, validatedob, updateprofile);
 route.get("/profile", authentication, getprofile);
+route.put("/forgetpassword", forgetPassword);
+route.put("/resetpassword/:token", resetPassword);
 module.exports = route;
