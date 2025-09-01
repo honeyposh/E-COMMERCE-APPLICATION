@@ -3,6 +3,14 @@ const productModel = require("../models/productModel");
 const orderModel = require("../models/orderModel");
 const Stripe = require("stripe");
 const stripe = new Stripe(process.env.STRIPE_KEY);
+const validTransitions = {
+  Pending: ["Processing", "Cancelled"],
+  Processing: ["Paid", "Cancelled"],
+  Paid: ["Shipped"],
+  Shipped: ["Delivered"],
+  Delivered: [],
+  Cancelled: [],
+};
 exports.createOrder = async (req, res, next) => {
   const {
     taxPrice,
@@ -232,6 +240,18 @@ exports.updateOrderStatus = async (req, res, next) => {
       error.status = 404;
       return next(error);
     }
+    if (order.orderStatus === "Delivered") {
+      const error = new Error("Cannot update an order that has been delivered");
+      error.status = 400;
+      return next(error);
+    }
+    if (!validTransitions[order.orderStatus].includes(orderStatus)) {
+      const error = new Error(
+        `Invalid transition: '${order.orderStatus}' to '${orderStatus}'`
+      );
+      error.status = 400;
+      return next(error);
+    }
     await orderModel.findByIdAndUpdate(
       orderId,
       { orderStatus },
@@ -242,5 +262,36 @@ exports.updateOrderStatus = async (req, res, next) => {
       .json({ success: true, message: "order status updated" });
   } catch (error) {
     return next(error);
+  }
+};
+exports.updateOrderToDeliver = async (req, res, next) => {
+  try {
+    console.log(new Date());
+    const { orderId } = req.params;
+    const { admin } = req.user;
+    const order = await orderModel.findById(orderId);
+    if (!admin) {
+      const error = new Error("Access denied");
+      error.status = 403;
+      return next(error);
+    }
+    if (!order) {
+      const error = new Error("No order");
+      error.status = 404;
+      return next(error);
+    }
+    if (order.orderStatus === "Delivered" || order.isDelivered) {
+      const error = new Error("Order has already been delivered");
+      error.status = 400;
+      return next(error);
+    }
+    order.orderStatus = "Delivered";
+    order.isDelivered = true;
+    order.deliveredAt = new Date();
+    await order.save();
+    // console.log(order.deliveredAt.toLocaleString());
+    res.status(200).json({ message: "Order delivered succesfully" });
+  } catch (error) {
+    next(error);
   }
 };
