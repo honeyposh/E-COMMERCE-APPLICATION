@@ -27,7 +27,6 @@ const userSchema = new mongoose.Schema(
       trim: true,
     },
     dateOfBirth: {
-      required: [true, "Date of birth is required"],
       type: Date,
     },
     isAdmin: {

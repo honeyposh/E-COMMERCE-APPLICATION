@@ -1,15 +1,14 @@
 const userModel = require("../models/userModel");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const isoDateOnlyRegex = /^\d{4}-\d{2}-\d{2}$/;
+//const isoDateOnlyRegex = /^\d{4}-\d{2}-\d{2}$/;
 const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w]).{8,}$/;
 const nodemailer = require("nodemailer");
 const sendgridTransport = require("nodemailer-sendgrid-transport");
 const transporter = nodemailer.createTransport(
   sendgridTransport({
     auth: {
-      api_key:
-        "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",
+      api_key: process.env.TRANSPORTER_API_KEY,
     },
   })
 );
@@ -189,6 +188,11 @@ exports.resetPassword = async (req, res, next) => {
     if (!user) {
       const error = new Error("user not found");
       error.status = 404;
+      return next(error);
+    }
+    if (!password) {
+      const error = new Error("Password is required");
+      error.status = 400;
       return next(error);
     }
     if (!passwordRegex.test(password)) {

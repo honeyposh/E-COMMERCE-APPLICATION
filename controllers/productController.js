@@ -51,6 +51,12 @@ exports.createProduct = async (req, res, next) => {
       error.status = 404;
       return next(error);
     }
+    if (!req.files || req.files.length === 0) {
+      const error = new Error("At least one product image is required");
+      error.status = 400;
+      return next(error);
+    }
+
     for (const x of req.files) {
       const response = await cloudinary.uploader.upload(x.path, {
         folder: "Posh",

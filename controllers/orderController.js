@@ -16,6 +16,12 @@ exports.createOrder = async (req, res, next) => {
   } = req.body;
   try {
     const { id } = req.user;
+    const existingOrder = await orderModel.findOne({ user: id, isPaid: false });
+    if (existingOrder) {
+      const error = new Error("You already have an unpaid order.");
+      error.status = 400;
+      return next(error);
+    }
     const cart = await cartModel
       .findOne({ user: id })
       .populate("cartItems.productId", "name price");
@@ -69,24 +75,34 @@ exports.createOrder = async (req, res, next) => {
 exports.checkout = async (req, res, next) => {
   const { orderId } = req.params;
   try {
-    const order = await orderModel.findById(orderId);
     const { id } = req.user;
-    const cart = await cartModel
-      .findOne({ user: id })
-      .populate("cartItems.productId", "name price");
-    console.log(cart);
-    if (!cart || cart.cartItems.length <= 0) {
-      const error = new Error("No Item in cart");
+    const order = await orderModel
+      .findById(orderId)
+      .populate("cartItems.productId", "name price image");
+    //.lean();
+    if (!order) {
+      const error = new Error("Order not found");
       error.status = 404;
       return next(error);
     }
+    if (order.isPaid) {
+      const error = new Error("Order already paid");
+      error.status = 400;
+      return next(error);
+    }
+    if (order.orderStatus !== "Pending") {
+      const error = new Error("Order cannot be checked out");
+      error.status = 400;
+      return next(error);
+    }
+
     const line_items = [
-      ...cart.cartItems.map((item) => ({
+      ...order.cartItems.map((item) => ({
         price_data: {
           currency: "usd",
           product_data: {
             name: item.productId.name,
-            images: [item.productId.image],
+            images: [item.productId.image[0].url],
           },
           unit_amount: item.productId.price * 100, // cents
         },
@@ -125,6 +141,7 @@ exports.checkout = async (req, res, next) => {
       url: session.url,
     });
   } catch (error) {
+    console.log(error);
     return next(error);
   }
 };

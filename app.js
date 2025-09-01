@@ -2,6 +2,7 @@ require("dotenv").config({ quiet: true });
 const cookieParser = require("cookie-parser");
 const express = require("express");
 const app = express();
+const cors = require("cors");
 const mongoose = require("mongoose");
 const port = process.env.PORT;
 const userRoute = require("./routes/userRoute");
@@ -10,6 +11,7 @@ const productRoute = require("./routes/productRoute");
 const cartRoute = require("./routes/cartRoute");
 const orderRoute = require("./routes/orderRoute");
 const webhookRoute = require("./routes/webhook");
+app.use(cors());
 // connect to db first before running on port
 mongoose
   .connect(process.env.MONGO_URI)
